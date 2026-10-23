@@ -179,6 +179,11 @@ nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;
 @keyframes sp{to{transform:rotate(360deg)}}
 .themeb{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;flex:none}
 .themeb:hover{border-color:var(--accent)}
+.search{display:flex;align-items:center;gap:8px;background:#fffdf5;border-radius:12px;padding:0 12px;min-height:50px;color:#141a20;margin-top:4px}
+.search input{border:0;background:transparent;flex:1;min-width:0;min-height:48px;color:#141a20;font-size:16px}
+.search input::placeholder{color:#6a6450}
+.search input:focus{outline:none}
+.search:focus-within{outline:3px solid var(--stripe);outline-offset:1px}
 .memb{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;background:#141a20;color:#f2b705;border-radius:999px;padding:4px 14px;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
 .memb.dark{background:var(--ink);color:var(--accent)}
 .installbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));width:min(500px,calc(100% - 24px));z-index:20;background:var(--surface);border:2px solid var(--accent);border-radius:16px;padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 10px 30px rgba(0,0,0,.28)}
@@ -460,22 +465,30 @@ function vNoCfg(){
 }
 
 /* ================= CUSTOMER ================= */
+const KW={elec:'كهرباء كهربائي بلاك سويج ضوء ثريا شورت فيوز قاطع وايرات',plumb:'سباكة سباك ماي تسريب حنفية مغسلة مجاري بوري حمام',gen:'مولدة مولدات امبير مولد سحب',ac:'تبريد تكييف سبلت مكيف مبردة',appl:'غسالة ثلاجة طباخ فرن مجمدة اجهزة سخان',carp:'نجارة نجار باب دولاب خشب كنتور',paint:'صبغ صباغ صباغة جدار',net:'انترنت واي فاي راوتر ستلايت رسيفر دش',solar:'شمسية الواح طاقة انفرتر بطارية',water:'خزان خزانات مضخة ماطور دينمو ماي ما يصعد',cctv:'كاميرات كاميرا مراقبة',clean:'تنظيف سجاد كنبات غسل',weld:'حدادة حداد لحام حماية حديد سياج',games:'بلي ستيشن بلايستيشن العاب يد تحكم اكس بوكس'};
+const norm=t=>String(t||'').replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').toLowerCase().trim();
+function catMatches(q){q=norm(q);if(!q)return CATS.map(c=>c.id);const words=q.split(/\s+/);
+  const st=w=>w.replace(/^(و|ب)?ال(?=..)/,'');
+  return CATS.filter(c=>{const hs=norm(c.name+' '+(KW[c.id]||'')).split(/\s+/).map(st);return words.map(st).some(w=>w.length>1&&hs.some(h=>h.startsWith(w)||(h.length>2&&w.startsWith(h))));}).map(c=>c.id);}
+function filterCats(q){const ids=catMatches(q);document.querySelectorAll('.cat[data-id]').forEach(b=>{b.hidden=!ids.includes(b.dataset.id);});
+  const e=$('#nocat');if(e)e.hidden=ids.length>0;return ids;}
 function vHome(){
   const counts={};A.approvedTechs.filter(canWork).forEach(t=>counts[t.cat]=(counts[t.cat]||0)+1);
   const active=A.custOrders.filter(o=>['open','awarded','accepted','onway','working'].includes(o.status));
+  const shown=catMatches(V.q||'');
   return `<section class="hero">${(A.profile||{}).memberNo?`<span class="memb">${ic('user',14)} رقم عضويتك ${A.profile.memberNo}</span>`:''}<h1>شنو العطل اليوم؟</h1>
-    <p>اختار الخدمة واكتب العطل. الفنيون يرسلون أسعارهم، وإنت تختار بكيفك.</p></section>
-  ${isFree()?`<div class="freeban"><b>${ic('gift',16)} الشهر الأول بدون أي رسوم</b><p class="small">لحد ${dateAr(paidStart())}، فزعة ما تاخذ ولا دينار.</p></div>`:''}
-  ${active.length?`<section class="sec"><h2>طلباتك الجارية</h2><div class="list">${active.map(orderRow).join('')}</div></section>`:''}
-  <section class="sec"><div class="sec-head"><h2>اختار الخدمة</h2></div>
-    <div class="cats">${CATS.map(c=>`<button class="cat" data-act="newReq" data-id="${c.id}"><span class="ic">${ic(c.id,20)}</span>${c.name}<small>${counts[c.id]||0} فني</small></button>`).join('')}</div>
+    <label class="search" for="svcq">${ic('search',18)}<input id="svcq" type="search" enterkeyhint="search" autocomplete="off" placeholder="اكتب العطل: مولدة، تسريب ماي، سبلت…" value="${esc(V.q||'')}"></label></section>
+  <section class="sec"><div class="sec-head"><h2>اختار الخدمة</h2>${isFree()?`<span class="badge ok">${ic('gift',12)} الشهر الأول مجاني</span>`:''}</div>
+    <div class="cats">${CATS.map(c=>`<button class="cat" data-act="newReq" data-id="${c.id}" ${shown.includes(c.id)?'':'hidden'}><span class="ic">${ic(c.id,20)}</span>${c.name}<small>${counts[c.id]||0} فني</small></button>`).join('')}</div>
+    <p class="empty" id="nocat" ${shown.length?'hidden':''}>ما لقينا خدمة بهالاسم. جرّب كلمة ثانية، مثل: كهرباء، ماي، مولدة.</p>
   </section>
-  <section class="sec"><h2>شلون تشتغل فزعة</h2>
+  ${active.length?`<section class="sec"><div class="sec-head"><h2>طلباتك الجارية</h2>${active.length>2?`<button class="back" style="min-height:32px" data-act="go" data-v="orders">كل طلباتي (${active.length})</button>`:''}</div><div class="list">${active.slice(0,2).map(orderRow).join('')}</div></section>`:''}
+  ${A.custOrders.length?'':`<section class="sec"><h2>شلون تشتغل فزعة</h2>
     <div class="list">
       <div class="card" style="flex-direction:row;gap:12px;align-items:center">${ic('tool',22)}<div><b>اكتب العطل</b><p class="small muted">كل الفنيين بالقسم يشوفون طلبك، بدون رقمك وعنوانك الكامل.</p></div></div>
       <div class="card" style="flex-direction:row;gap:12px;align-items:center">${ic('tag',22)}<div><b>قارن الأسعار</b><p class="small muted">كل فني يرسل سعره ووقت وصوله، ومعه تقييمه.</p></div></div>
       <div class="card" style="flex-direction:row;gap:12px;align-items:center">${ic('shield',22)}<div><b>اختار بكيفك</b><p class="small muted">وشغلك مضمون ${C().warrantyDays} يوم إذا تم من خلال فزعة.</p></div></div>
-    </div></section>`;
+    </div></section>`}`;
 }
 function orderRow(o){
   const offers=(A.offersByOrder[o.id]||[]).length;
@@ -857,6 +870,8 @@ function render(){
   else{nav.hidden=false;$('#tabs').innerHTML=TABS[role].map(t=>`<button data-act="${t.id==='me'?'logout':'go'}" data-v="${t.id}" ${cur===t.id?'aria-current="page"':''}>${ic(t.icon,22)}${t.label}${badge[t.id]?`<span class="count">${badge[t.id]}</span>`:''}</button>`).join('');}
   if(role==='tech')watchOpen();
 }
+document.addEventListener('input',e=>{if(e.target.id==='svcq'){V.q=e.target.value;filterCats(V.q);}});
+document.addEventListener('keydown',e=>{if(e.target.id==='svcq'&&e.key==='Enter'){const ids=filterCats(e.target.value);if(ids.length===1){e.preventDefault();go('newReq',{id:ids[0],form:null});}}});
 document.addEventListener('focusout',()=>setTimeout(()=>{if(render.pending&&!(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)))render();},50));
 
 /* ================= actions ================= */
