@@ -205,7 +205,7 @@ const firebaseConfig = {
   messagingSenderId: "670162029135",
   appId: "1:670162029135:web:3e797a7830fe932208f83a"
 };
-const ADMIN_EMAIL = "alsfarly2@gmail.com";
+const ADMIN_EMAILS = ["alsfarly2@gmail.com","ali_alsaffar@uomosul.edu.iq"];
 
 (function(){
 const CONFIGURED=!String(firebaseConfig.apiKey).startsWith('PASTE');
@@ -415,7 +415,7 @@ function vProfileSetup(){
 }
 function vNoCfg(){
   if(A.isAdmin)return `<div class="card hl"><h2>أهلاً بالمدير</h2><p class="small">ما في إعدادات بعد. اضغط الزر حتى ننشئ الإعدادات الأولى، وتقدر تعدّلها بعدين من «الإدارة».</p><button class="btn pri block" data-act="initCfg">أنشئ الإعدادات الأولى</button></div>`;
-  return `<div class="empty">${ic('gear',28)}<b>التطبيق قيد التجهيز</b><span>ارجع بعد شوية.</span></div>`;
+  return `<div class="empty">${ic('gear',28)}<b>التطبيق قيد التجهيز</b><span>ارجع بعد شوية.</span><span class="small" dir="ltr">${esc(A.user&&A.user.email||"")}</span></div>`;
 }
 
 /* ================= CUSTOMER ================= */
@@ -903,7 +903,7 @@ if(CONFIGURED&&!auth){
   auth.getRedirectResult().catch(e=>toast(errMsg(e)));
   auth.onAuthStateChanged(u=>{
     unsubAll();firstLoad={};
-    Object.assign(A,{user:u||null,isAdmin:!!(u&&u.email===ADMIN_EMAIL&&u.emailVerified),profile:undefined,tech:undefined,cfg:undefined,
+    Object.assign(A,{user:u||null,isAdmin:!!(u&&ADMIN_EMAILS.includes((u.email||"").toLowerCase())&&u.emailVerified),profile:undefined,tech:undefined,cfg:undefined,
       approvedTechs:[],custOrders:[],techAwarded:[],openOrders:[],myOffers:{},offersByOrder:{},contacts:{},topups:[],ledger:[],adm:{orders:[],topups:[],techs:[],ledger:[]}});
     if(u)startSession(u);
     render();
