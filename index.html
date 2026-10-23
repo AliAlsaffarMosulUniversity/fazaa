@@ -210,7 +210,8 @@ const ADMIN_EMAILS = ["alsfarly2@gmail.com","ali_alsaffar@uomosul.edu.iq"];
 (function(){
 const CONFIGURED=!String(firebaseConfig.apiKey).startsWith('PASTE');
 let auth=null,db=null;
-if(CONFIGURED&&window.firebase){firebase.initializeApp(firebaseConfig);auth=firebase.auth();db=firebase.firestore();}
+if(CONFIGURED&&window.firebase){firebase.initializeApp(firebaseConfig);auth=firebase.auth();db=firebase.firestore();
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});}
 
 /* ================= icons ================= */
 const ICON={
@@ -274,7 +275,7 @@ const DEFAULT_CFG=()=>{const d=new Date();d.setHours(0,0,0,0);return {
   payTo:{name:'',zain:'',fib:''}};};
 
 /* ================= state ================= */
-const A={user:null,isAdmin:false,profile:undefined,tech:undefined,techPhone:'',cfg:undefined,
+const A={user:undefined,isAdmin:false,profile:undefined,tech:undefined,techPhone:'',cfg:undefined,
   approvedTechs:[],ratings:{},custOrders:[],techAwarded:[],openOrders:[],myOffers:{},offersByOrder:{},contacts:{},
   topups:[],ledger:[],adm:{orders:[],topups:[],techs:[],ledger:[]}};
 let role='customer';try{role=localStorage.getItem('fazaa-role')||'customer';}catch(e){}
