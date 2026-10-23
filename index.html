@@ -222,6 +222,12 @@ const ICON={
   carp:'<path d="m15 12-8.5 8.5a2.1 2.1 0 0 1-3-3L12 9"/><path d="M17.6 15 22 10.6M20 12.5 11.5 4 14 1.5l8.5 8.5"/>',
   paint:'<rect x="3" y="3" width="14" height="6" rx="1"/><path d="M17 6h3v6h-9v3"/><rect x="9.5" y="15" width="3" height="6" rx="1"/>',
   net:'<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0"/><path d="M12 19.5h.01"/>',
+  solar:'<rect x="3" y="4" width="18" height="11" rx="1"/><path d="M3 9.5h18M9 4v11M15 4v11M12 15v5M8 20h8"/>',
+  water:'<path d="M12 3s-6 6.5-6 11a6 6 0 0 0 12 0c0-4.5-6-11-6-11z"/><path d="M9 15a3 3 0 0 0 3 3"/>',
+  cctv:'<path d="M2 8l14-4 2 7-14 4z"/><path d="M9 13l1.5 5H5M5 15v6"/>',
+  clean:'<path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/>',
+  weld:'<path d="M12 22c4 0 7-3 7-7 0-5-4-7-5-11-2 3-1 5-3 7-1-1-1.5-2-1.5-3C7 10 5 12.5 5 15c0 4 3 7 7 7z"/>',
+  games:'<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v4M5 12.5h4M15.5 11.5h.01M18 13.5h.01"/>',
   home:'<path d="M3 11 12 3l9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   list:'<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
   tool:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
@@ -252,7 +258,9 @@ const ic=(n,s=20,w=2)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill
 /* ================= constants ================= */
 const CATS=[
   {id:'elec',name:'كهرباء'},{id:'plumb',name:'سباكة'},{id:'gen',name:'مولدات'},{id:'ac',name:'تبريد وتكييف'},
-  {id:'appl',name:'أجهزة منزلية'},{id:'carp',name:'نجارة'},{id:'paint',name:'صباغة'},{id:'net',name:'انترنت وستلايت'}
+  {id:'appl',name:'أجهزة منزلية'},{id:'carp',name:'نجارة'},{id:'paint',name:'صباغة'},{id:'net',name:'انترنت وستلايت'},
+  {id:'solar',name:'الطاقة الشمسية'},{id:'water',name:'خزانات ومضخات الماي'},{id:'cctv',name:'كاميرات مراقبة'},{id:'clean',name:'تنظيف منازل وسجاد'},
+  {id:'weld',name:'حدادة ولحام'},{id:'games',name:'بلي ستيشن وأجهزة ألعاب'}
 ];
 const AREAS=['الزهور','المجموعة الثقافية','حي الجامعة','الدواسة','باب الطوب','النبي يونس','الحدباء','المثنى','الكرامة','حي الشرطة','الموصل الجديدة','اليرموك','الفيصلية','السكر','الرفاعي','الصناعة','وادي حجر','الزنجيلي','البعث','النبي شيت'];
 const FLOW=['open','awarded','accepted','onway','working','done'];
@@ -261,7 +269,7 @@ const STAT_SUB={open:'الفنيون بقسمك يشوفون طلبك ويرسل
 const METHODS={zain:'زين كاش',fib:'بنك العراق الأول',qi:'بطاقة كي'};
 const DAY=864e5;
 const DEFAULT_CFG=()=>{const d=new Date();d.setHours(0,0,0,0);return {
-  launch:d.getTime(),freeDays:30,comm:{elec:2000,plumb:2000,gen:3000,ac:3000,appl:2500,carp:2500,paint:3000,net:1500},
+  launch:d.getTime(),freeDays:30,comm:{elec:2000,plumb:2000,gen:3000,ac:3000,appl:2500,carp:2500,paint:3000,net:1500,solar:3000,water:2000,cctv:2500,clean:2500,weld:2500,games:1500},
   creditLimit:10000,bonusPct:20,premiumPrice:25000,premiumDisc:50,warrantyDays:30,
   payTo:{name:'',zain:'',fib:''}};};
 
@@ -316,7 +324,10 @@ const docs=s=>s.docs.map(d=>Object.assign({id:d.id},d.data()));
 
 function startSession(u){
   const uid=u.uid;
-  sub(db.doc('config/app'),s=>{A.cfg=s.exists?s.data():null;render();});
+  sub(db.doc('config/app'),s=>{A.cfg=s.exists?s.data():null;
+    if(A.cfg&&A.isAdmin){const d=DEFAULT_CFG().comm,c=A.cfg.comm||{},miss={};Object.keys(d).forEach(k=>{if(!(k in c))miss[k]=d[k];});
+      if(Object.keys(miss).length)db.doc('config/app').set({comm:miss},{merge:true}).catch(e=>console.warn(e));}
+    render();});
   sub(db.doc('users/'+uid),s=>{A.profile=s.exists?s.data():null;render();});
   sub(db.collection('ratings'),s=>{const r={};s.docs.forEach(d=>{const x=d.data();(r[x.techUid]||(r[x.techUid]={sum:0,n:0}));r[x.techUid].sum+=x.stars;r[x.techUid].n++;});A.ratings=r;render();});
   sub(db.collection('techs').where('status','==','approved'),s=>{A.approvedTechs=docs(s);render();});
