@@ -210,7 +210,7 @@ nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;
         <div class="mark" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg></div>
         <div><b>فزعة</b><small>فنيّك يوصلك لباب البيت</small></div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px"><span class="dayp" id="dayp" hidden></span><button class="themeb" id="qrb" type="button" data-act="shareApp" aria-label="شارك تطبيق فزعة" title="شارك فزعة"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/></svg></button><button class="themeb" id="themeb" type="button" aria-label="تبديل الوضع النهاري والليلي"></button></div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="dayp" id="dayp" hidden></span><button class="themeb" id="bellb" type="button" data-act="notif" aria-label="فعّل التنبيهات"></button><button class="themeb" id="qrb" type="button" data-act="shareApp" aria-label="شارك تطبيق فزعة" title="شارك فزعة"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/></svg></button><button class="themeb" id="themeb" type="button" aria-label="تبديل الوضع النهاري والليلي"></button></div>
     </div>
     <div class="roles" role="group" aria-label="اختر الواجهة" id="roles" hidden></div>
   </header>
@@ -267,6 +267,8 @@ const ICON={
   leaf:'<path d="M5 19c0-9 6-14 15-14 0 9-5 15-14 15M5 19l7-7"/>',
   window:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M12 3v18M4 12h16"/>',
   qr:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  belloff:'<path d="M6 8a6 6 0 0 1 9.3-5M18 8c0 7 3 9 3 9H9M6 8c0 7-3 9-3 9h4"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0M2 2l20 20"/>',
   tiles:'<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>',
   home:'<path d="M3 11 12 3l9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   list:'<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
@@ -356,7 +358,19 @@ function errMsg(e){console.error(e);const c=e&&e.code||'';
   if(c.includes('popup'))return 'انغلقت نافذة الدخول، حاول مرة ثانية.';
   return 'صار خطأ: '+(e&&e.message||e);}
 function go(name,extra){V=Object.assign({name},extra||{});render();window.scrollTo(0,0);}
-function notify(title,body){toast(title+(body?': '+body:''));try{if(document.hidden&&'Notification' in window&&Notification.permission==='granted')new Notification(title,{body});}catch(e){}}
+const canNotify=()=>'Notification' in window;
+function beep(){try{const ac=new (window.AudioContext||window.webkitAudioContext)();[0,0.18].forEach((d,i)=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=i?1318:988;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(0.0001,ac.currentTime+d);g.gain.exponentialRampToValueAtTime(0.25,ac.currentTime+d+0.02);g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+d+0.35);o.start(ac.currentTime+d);o.stop(ac.currentTime+d+0.4);});}catch(e){}}
+function notify(title,body,important){toast(title+(body?': '+body:''));
+  if(important){try{navigator.vibrate&&navigator.vibrate([180,80,180]);}catch(e){}beep();}
+  if(!canNotify()||Notification.permission!=='granted')return;
+  if(!document.hidden&&!important)return;
+  const opt={body:body||'',icon:'icon-192.png',badge:'icon-192.png',tag:'fazaa-'+Date.now(),vibrate:[180,80,180],dir:'rtl',lang:'ar'};
+  try{if(navigator.serviceWorker&&navigator.serviceWorker.controller){navigator.serviceWorker.ready.then(r=>r.showNotification(title,opt)).catch(()=>{});}else{new Notification(title,opt);}}catch(e){}}
+function paintBell(){const b=$('#bellb');if(!b)return;const st=canNotify()?Notification.permission:'denied';
+  b.innerHTML=ic(st==='denied'?'belloff':'bell',20);b.style.color=st==='granted'?'var(--good)':'';
+  b.title=st==='granted'?'التنبيهات مفعّلة':st==='denied'?'التنبيهات مقفلة':'فعّل التنبيهات';b.setAttribute('aria-label',b.title);}
+function notifNudge(text){if(!canNotify()||Notification.permission!=='default')return '';
+  return `<div class="card hl" style="flex-direction:row;align-items:center;gap:12px"><span class="cat-ic">${ic('bell',22)}</span><p class="small" style="flex:1;min-width:0">${text}</p><button class="btn pri sm" data-act="notif">فعّل</button></div>`;}
 async function run(fn){if(busy)return;busy=true;try{await fn();}catch(e){toast(errMsg(e));}finally{busy=false;}}
 
 /* ================= subscriptions ================= */
@@ -379,11 +393,11 @@ function startSession(u){
   sub(db.collection('techs').where('status','==','approved'),s=>{A.approvedTechs=docs(s);render();});
   sub(db.collection('orders').where('customerUid','==',uid),s=>{
     const prev=A.custOrders;A.custOrders=docs(s).sort((a,b)=>b.createdAt-a.createdAt);
-    A.custOrders.forEach(o=>{const p=prev.find(x=>x.id===o.id);if(p&&p.status!==o.status&&prev.length)notify('طلبك: '+STAT[o.status]);});
+    A.custOrders.forEach(o=>{const p=prev.find(x=>x.id===o.id);if(p&&p.status!==o.status&&prev.length){if(o.status==='accepted')notify('✅ '+(o.techName||'الفني')+' أكّد طلبك','الفني يتجهز ويجيك',true);else if(o.status==='onway')notify('🚗 الفني بالطريق لعندك',catName(o.cat),true);else if(o.status==='done')notify('تم الإنجاز','قيّم الفني من صفحة الطلب',true);else if(o.status==='open'&&p.status==='awarded')notify('الفني اعتذر','اختار عرض ثاني',true);else notify('طلبك: '+STAT[o.status]);}});
     syncDyn('custOffers',A.custOrders.filter(o=>o.status==='open'||o.status==='awarded').map(o=>o.id),oid=>
       db.collection('orders').doc(oid).collection('offers').onSnapshot(s2=>{
         const before=(A.offersByOrder[oid]||[]).length;A.offersByOrder[oid]=docs(s2).sort((a,b)=>a.price-b.price);
-        if(A.offersByOrder[oid].length>before&&firstLoad['o'+oid])notify('وصلك عرض جديد','على طلب '+catName((A.custOrders.find(x=>x.id===oid)||{}).cat));
+        if(A.offersByOrder[oid].length>before&&firstLoad['o'+oid])notify('💰 وصلك عرض جديد','على طلب '+catName((A.custOrders.find(x=>x.id===oid)||{}).cat),true);
         firstLoad['o'+oid]=true;render();},e=>console.warn(e)));
     render();});
   sub(db.doc('techs/'+uid),s=>{
@@ -396,7 +410,7 @@ function startTech(uid){
   db.doc('techs/'+uid+'/private/info').get().then(s=>{A.techPhone=s.exists?s.data().phone:'';}).catch(()=>{});
   sub(db.collection('orders').where('techUid','==',uid),s=>{
     const prev=A.techAwarded;A.techAwarded=docs(s).sort((a,b)=>b.createdAt-a.createdAt);
-    A.techAwarded.forEach(o=>{if(o.status==='awarded'&&!prev.find(p=>p.id===o.id&&p.status==='awarded')&&firstLoad.ta)notify('زبون اختار عرضك','أكّد الشغلة الآن');});
+    A.techAwarded.forEach(o=>{if(o.status==='awarded'&&!prev.find(p=>p.id===o.id&&p.status==='awarded')&&firstLoad.ta)notify('🎉 زبون اختار عرضك','أكّد الشغلة الآن',true);});
     firstLoad.ta=true;
     syncDyn('contacts',A.techAwarded.filter(o=>['accepted','onway','working'].includes(o.status)&&o.share).map(o=>o.id),oid=>
       db.doc('orders/'+oid+'/private/contact').onSnapshot(c=>{A.contacts[oid]=c.exists?c.data():null;render();},()=>{A.contacts[oid]=null;}));
@@ -412,7 +426,7 @@ function watchOpen(){
   if(openUnsub)openUnsub();openCat=t.cat;
   openUnsub=db.collection('orders').where('cat','==',t.cat).where('status','==','open').onSnapshot(s=>{
     const prevIds=A.openOrders.map(o=>o.id);A.openOrders=docs(s).sort((a,b)=>b.createdAt-a.createdAt);
-    if(firstLoad.open&&A.openOrders.some(o=>!prevIds.includes(o.id)&&o.customerUid!==A.user.uid))notify('طلب جديد بقسمك',catName(t.cat));
+    if(firstLoad.open&&A.openOrders.some(o=>!prevIds.includes(o.id)&&o.customerUid!==A.user.uid))notify('🔔 طلب جديد بقسمك',catName(t.cat),true);
     firstLoad.open=true;
     syncDyn('myOffers',A.openOrders.slice(0,40).map(o=>o.id),oid=>db.doc('orders/'+oid+'/offers/'+A.user.uid).onSnapshot(d=>{A.myOffers[oid]=d.exists?d.data():null;render();},()=>{}));
     render();},e=>console.warn('open',e));
@@ -562,6 +576,7 @@ function vTrack(){
   }
   return `<button class="back" data-act="go" data-v="orders">${ic('back',18)} طلباتي</button>
   <div class="orow"><h1>طلب ${catName(o.cat)}</h1>${stBadge(o)}</div>
+  ${['open','awarded','accepted','onway','working'].includes(o.status)?notifNudge('فعّل التنبيهات حتى يوصلك إشعار أول ما يرسل فني عرضه، أو يأكد طلبك.'):''}
   <div class="card">${timeline(o)}
     ${o.status==='awarded'?`<p class="small">اخترت <b>${esc(o.techName)}</b> بسعر <b>${iqd(o.price)}</b>. ننتظر تأكيده.</p>
       <button class="btn ghost sm" data-act="unaward" data-id="${o.id}">تأخر؟ ارجع للعروض واختار غيره</button>`:''}
@@ -639,6 +654,7 @@ function vTJobs(){
   const c=commFor(t,t.cat);const ok=canWork(t);
   return `${(A.profile||{}).techNo?`<span class="memb dark">${ic('tool',14)} رقم الفني ${A.profile.techNo}</span>`:''}<div class="orow"><h1>الطلبات</h1>${isPrem(t)?`<span class="badge gold">${ic('crown',12)} مميز</span>`:''}</div>
   ${freeBanner()}
+  ${notifNudge('فعّل التنبيهات حتى يوصلك إشعار أول ما ينزل طلب جديد بقسمك، أو يختارك زبون.')}
   <div class="switch"><div><b>متاح لاستلام الطلبات</b><div class="small muted">${t.available!==false?'تشوف طلبات قسمك الجديدة':'مخفي عن الزبائن'}</div></div>
     <button class="toggle" role="switch" aria-checked="${t.available!==false}" aria-label="متاح" data-act="avail"></button></div>
   ${awarded.length?`<section class="sec"><h2>زبائن اختاروك ${ic('check',16)}</h2><div class="list">${awarded.map(o=>`<article class="card hl">
@@ -910,7 +926,7 @@ const TABS={
 const HOME={customer:'home',tech:'tjobs',admin:'dash'};
 const PARENT={newReq:'home',track:'orders'};
 function render(){
-  renderInstall();
+  renderInstall();paintBell();
   const view=$('#view'),nav=$('#nav'),roles=$('#roles'),dp=$('#dayp');
   if(!CONFIGURED){view.innerHTML=vNotConfigured();return;}
   if(A.user===null){roles.hidden=true;nav.hidden=true;dp.hidden=true;view.innerHTML=vLogin();return;}
@@ -1024,8 +1040,10 @@ document.addEventListener('click',e=>{
     case 'premium':run(async()=>{const t=A.tech,s=C();const base=Math.max(Date.now(),t.premiumUntil||0);const b2=db.batch();
       b2.update(db.doc('techs/'+A.user.uid),{balance:t.balance-s.premiumPrice,premiumUntil:base+30*DAY});
       b2.set(db.collection('ledger').doc(),{type:'premium',amount:s.premiumPrice,techUid:A.user.uid,at:Date.now()});await b2.commit();toast('صرت فني مميز لمدة شهر');});return;
-    case 'notif':if(!('Notification' in window)){toast('موبايلك ما يدعم التنبيهات من المتصفح');return;}
-      Notification.requestPermission().then(p=>toast(p==='granted'?'تفعّلت التنبيهات':'ما تفعّلت التنبيهات'));return;
+    case 'notif':if(!canNotify()){toast('هذا المتصفح ما يدعم التنبيهات. ثبّت التطبيق أو افتحه بكروم');return;}
+      if(Notification.permission==='denied'){toast('التنبيهات مقفلة. فعّلها من إعدادات الموقع بالمتصفح (رمز القفل جنب الرابط)');return;}
+      if(Notification.permission==='granted'){notify('🔔 التنبيهات شغّالة','راح يوصلك إشعار مع كل تحديث',true);return;}
+      Notification.requestPermission().then(pp=>{paintBell();render.pending=false;render();if(pp==='granted')notify('🔔 تفعّلت التنبيهات','راح يوصلك إشعار مع كل تحديث',true);else toast('ما تفعّلت التنبيهات');});return;
     case 'approveTop':run(()=>approveTopup(A.adm.topups.find(x=>x.id===id)));return;
     case 'rejectTop':run(async()=>{await db.doc('topups/'+id).update({status:'rejected',decidedAt:Date.now()});toast('انرفض طلب الشحن');});return;
     case 'techStatus':run(async()=>{await db.doc('techs/'+id).update({status:v});toast(v==='approved'?'تفعّل الفني':'توقف الفني');});return;
