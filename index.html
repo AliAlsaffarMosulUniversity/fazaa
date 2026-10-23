@@ -181,6 +181,13 @@ nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;
 .icb{height:48px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);display:grid;place-items:center}
 .icb[aria-pressed="true"]{border:2px solid var(--accent);background:var(--chip)}
 .cat-ic{width:44px;height:44px;border-radius:12px;background:var(--chip);display:grid;place-items:center;flex:none}
+.scrim{position:fixed;inset:0;background:rgba(10,14,18,.6);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:520px;border-radius:22px 22px 0 0;display:flex;flex-direction:column;gap:14px;max-height:92%;overflow:auto;padding-block:20px calc(22px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+.sheet h2{display:flex;align-items:center;gap:8px}
+.qrbox{background:#fff;color:#141a20;border-radius:20px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px;align-self:center;border:2px solid var(--accent)}
+.qrbox svg{width:min(260px,68vw);height:auto;display:block}
+.invite{display:flex;align-items:center;gap:12px;width:100%;text-align:right;background:var(--surface);border:2px dashed var(--accent);border-radius:16px;padding:14px;color:var(--ink)}
+.invite .ic2{width:46px;height:46px;border-radius:12px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
 .themeb{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;flex:none}
 .themeb:hover{border-color:var(--accent)}
 .search{display:flex;align-items:center;gap:8px;background:#fffdf5;border-radius:12px;padding:0 12px;min-height:50px;color:#141a20;margin-top:4px}
@@ -203,7 +210,7 @@ nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;
         <div class="mark" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg></div>
         <div><b>فزعة</b><small>فنيّك يوصلك لباب البيت</small></div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px"><span class="dayp" id="dayp" hidden></span><button class="themeb" id="themeb" type="button" aria-label="تبديل الوضع النهاري والليلي"></button></div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="dayp" id="dayp" hidden></span><button class="themeb" id="qrb" type="button" data-act="shareApp" aria-label="شارك تطبيق فزعة" title="شارك فزعة"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/></svg></button><button class="themeb" id="themeb" type="button" aria-label="تبديل الوضع النهاري والليلي"></button></div>
     </div>
     <div class="roles" role="group" aria-label="اختر الواجهة" id="roles" hidden></div>
   </header>
@@ -211,6 +218,7 @@ nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;
 </div>
 <nav class="tabs" aria-label="التنقل" id="nav" hidden><div class="in" id="tabs"></div></nav>
 <div id="install" hidden></div>
+<div id="sharebox" hidden></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -258,6 +266,7 @@ const ICON={
   key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>',
   leaf:'<path d="M5 19c0-9 6-14 15-14 0 9-5 15-14 15M5 19l7-7"/>',
   window:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M12 3v18M4 12h16"/>',
+  qr:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/>',
   tiles:'<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>',
   home:'<path d="M3 11 12 3l9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   list:'<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
@@ -504,7 +513,8 @@ function vHome(){
       <div class="card" style="flex-direction:row;gap:12px;align-items:center">${ic('tool',22)}<div><b>اكتب العطل</b><p class="small muted">كل الفنيين بالقسم يشوفون طلبك، بدون رقمك وعنوانك الكامل.</p></div></div>
       <div class="card" style="flex-direction:row;gap:12px;align-items:center">${ic('tag',22)}<div><b>قارن الأسعار</b><p class="small muted">كل فني يرسل سعره ووقت وصوله، ومعه تقييمه.</p></div></div>
       <div class="card" style="flex-direction:row;gap:12px;align-items:center">${ic('shield',22)}<div><b>اختار بكيفك</b><p class="small muted">وشغلك مضمون ${C().warrantyDays} يوم إذا تم من خلال فزعة.</p></div></div>
-    </div></section>`}`;
+    </div></section>`}
+  <button class="invite" data-act="shareApp"><span class="ic2">${ic('qr',22)}</span><span style="flex:1;min-width:0"><b>ادعو أهلك وجيرانك لفزعة</b><br><span class="small muted">اعرض كود QR أو أرسل الرابط بالواتساب</span></span></button>`;
 }
 function orderRow(o){
   const offers=(A.offersByOrder[o.id]||[]).length;
@@ -711,6 +721,7 @@ function vTProfile(){
     <div class="field"><label for="te_bio">نبذة</label><input id="te_bio" maxlength="120" value="${esc(t.bio||'')}"></div>
     <button class="btn pri block" type="submit">احفظ</button>
   </form>
+  <button class="invite" data-act="shareApp"><span class="ic2">${ic('qr',22)}</span><span style="flex:1;min-width:0"><b>ادعو زملائك الفنيين</b><br><span class="small muted">كل ما زاد الفنيون، زادت ثقة الزبائن بالتطبيق</span></span></button>
   <div class="card"><b>تنبيهات الطلبات الجديدة</b><p class="small muted">تطلع لك إشارة على الموبايل والتطبيق مفتوح بالخلفية.</p>
     <button class="btn sec2 sm" data-act="notif">فعّل التنبيهات</button></div>
   <div class="card"><h2>قواعد فزعة</h2>
@@ -835,6 +846,29 @@ function vACats(){
   ${note('الإخفاء يشيل الاختصاص من صفحة الزبون ومن تسجيل الفنيين الجدد. الطلبات والفنيين القدامى يبقون مثل ما هم.')}`;
 }
 
+/* ================= share the app (QR) ================= */
+const APP_URL='https://alialsaffarmosuluniversity.github.io/fazaa/';
+const QR_LIB='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+let QR_SVG='';
+function loadQR(){return new Promise((res,rej)=>{if(window.qrcode)return res();const sc=document.createElement('script');sc.src=QR_LIB;sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});}
+function buildQR(){const q=qrcode(0,'H');q.addData(APP_URL);q.make();const N=q.getModuleCount(),B=2,S=N+2*B;let d='';
+  for(let y=0;y<N;y++){let x=0;while(x<N){if(q.isDark(y,x)){let r=x;while(r<N&&q.isDark(y,r))r++;d+=`M${x+B} ${y+B}h${r-x}v1h-${r-x}z`;x=r;}else x++;}}
+  const lg=N*0.24,lx=B+(N-lg)/2,f=n=>n.toFixed(2);
+  return `<svg viewBox="0 0 ${S} ${S}" role="img" aria-label="كود QR لتطبيق فزعة" shape-rendering="crispEdges"><rect width="${S}" height="${S}" fill="#fff"/><path fill="#141a20" d="${d}"/><rect x="${f(lx-.8)}" y="${f(lx-.8)}" width="${f(lg+1.6)}" height="${f(lg+1.6)}" rx="2" fill="#fff"/><rect x="${f(lx)}" y="${f(lx)}" width="${f(lg)}" height="${f(lg)}" rx="1.6" fill="#f2b705"/><g transform="translate(${f(lx+lg*.18)},${f(lx+lg*.18)}) scale(${(lg*.64/24).toFixed(4)})"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" fill="none" stroke="#141a20" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision"/></g></svg>`;}
+let shareMsg='';
+async function openShare(){const el=$('#sharebox');if(!el)return;const tech=role==='tech';
+  if(!QR_SVG){try{await loadQR();QR_SVG=buildQR();}catch(err){QR_SVG='<p class="small">ما انفتح الكود، أرسل الرابط بالواتساب.</p>';}}
+  shareMsg=tech?'فني أو صاحب صنعة بالموصل؟ سجّل بتطبيق فزعة مجاناً، والزبائن يوصلون لعندك وإنت تحدد سعرك: ':'عندك عطل بالبيت؟ اكتب العطل بتطبيق فزعة، والفنيين يرسلولك أسعارهم وإنت تختار: ';
+  el.innerHTML=`<div class="scrim" data-act="closeShare"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+    <div class="orow"><h2 id="shT">${ic('qr',20)} شارك فزعة</h2><button class="btn ghost sm" data-act="closeShare" aria-label="إغلاق">✕</button></div>
+    <p class="small muted">${tech?'خلّي زملائك الفنيين يمسحون الكود ويسجلون مجاناً.':'خلّي أهلك وجيرانك يمسحون الكود ويلكون فنيهم بسهولة.'}</p>
+    <div class="qrbox">${QR_SVG}<b>امسح الكود بكاميرة الموبايل</b></div>
+    <div class="row2"><a class="btn wa" href="https://wa.me/?text=${encodeURIComponent(shareMsg+APP_URL)}" target="_blank" rel="noopener">أرسل بالواتساب</a><button class="btn sec2" data-act="copyApp">انسخ الرابط</button>${navigator.share?'<button class="btn dark" data-act="nativeShare">مشاركة</button>':''}</div>
+  </div></div>`;
+  el.hidden=false;}
+function closeShare(){const el=$('#sharebox');if(el){el.hidden=true;el.innerHTML='';}}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeShare();});
+
 /* ================= theme (sun / moon) ================= */
 const SUN='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
 const MOON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
@@ -948,6 +982,10 @@ document.addEventListener('click',e=>{
   const order=()=>A.custOrders.find(x=>x.id===id)||A.techAwarded.find(x=>x.id===id);
   switch(a){
     case 'login':run(login);return;
+    case 'shareApp':openShare();return;
+    case 'closeShare':if(e.target===b||b.tagName==='BUTTON')closeShare();return;
+    case 'copyApp':try{navigator.clipboard.writeText(APP_URL).then(()=>toast('انسخ رابط فزعة'),()=>toast(APP_URL));}catch(err){toast(APP_URL);}return;
+    case 'nativeShare':try{navigator.share({title:'فزعة',text:shareMsg,url:APP_URL}).catch(()=>{});}catch(err){}return;
     case 'pickIcon':V.icon=v;document.querySelectorAll('.icb').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.v===v)));return;
     case 'catEdit':V.ced=id;V.icon=null;render.pending=false;render();window.scrollTo(0,0);return;
     case 'catCancel':V.ced=null;V.icon=null;render.pending=false;render();return;
