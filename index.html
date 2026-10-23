@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f2b705">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="فزعة">
 <title>فزعة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&family=Lalezar&display=swap">
@@ -168,6 +172,7 @@ nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;z-index:30;max-width:calc(100% - 32px);text-align:center}
 .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+.installbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));width:min(500px,calc(100% - 24px));z-index:20;background:var(--surface);border:2px solid var(--accent);border-radius:16px;padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 10px 30px rgba(0,0,0,.28)}
 @media (max-width:380px){.cats{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -187,6 +192,7 @@ nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;
   <main id="view"><div class="center"><div class="spin" role="status" aria-label="جاري التحميل"></div></div></main>
 </div>
 <nav class="tabs" aria-label="التنقل" id="nav" hidden><div class="in" id="tabs"></div></nav>
+<div id="install" hidden></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -756,6 +762,28 @@ function vASettings(){
   <button class="btn ghost block" data-act="logout">${ic('out',18)} تسجيل خروج</button>`;
 }
 
+/* ================= install (PWA) ================= */
+let deferredPrompt=null;
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const UA=navigator.userAgent||'';
+const isIOS=/iphone|ipad|ipod/i.test(UA)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const inApp=/FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|Snapchat|TikTok/i.test(UA);
+let installHidden=false;try{installHidden=sessionStorage.getItem('fazaa-install-later')==='1';}catch(e){}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;renderInstall();});
+window.addEventListener('appinstalled',()=>{deferredPrompt=null;installHidden=true;renderInstall();toast('تثبّتت فزعة على جهازك');});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+function renderInstall(){
+  const el=$('#install');if(!el)return;
+  if(isStandalone()||installHidden||!A.user){el.hidden=true;el.innerHTML='';return;}
+  let body,btn='';
+  if(inApp){body='افتح الرابط بمتصفح الموبايل (كروم أو سفاري) حتى تكدر تثبّت فزعة.';btn=`<button class="btn pri sm" data-act="copyLink">انسخ الرابط</button>`;}
+  else if(deferredPrompt){body='ثبّته على جهازك، وافتحه بلمسة وحدة وانت داخل دائماً.';btn=`<button class="btn pri sm" data-act="install">ثبّت التطبيق</button>`;}
+  else if(isIOS){body='اضغط زر المشاركة أسفل سفاري، ثم اختار «إضافة إلى الشاشة الرئيسية».';}
+  else{body='افتح قائمة المتصفح (النقاط الثلاث)، واختار «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».';}
+  el.hidden=false;
+  el.innerHTML=`<div class="installbar" role="dialog" aria-label="تثبيت فزعة"><div class="mark" aria-hidden="true">${ic('tool',22)}</div><div style="flex:1 1 200px;min-width:0"><b>ثبّت تطبيق فزعة</b><p class="small muted">${body}</p></div><div class="row2" style="flex:1 1 100%">${btn}<button class="btn ghost sm" data-act="installLater">لاحقاً</button></div></div>`;
+}
+
 /* ================= shell ================= */
 const TABS={
   customer:[{id:'home',label:'الرئيسية',icon:'home'},{id:'orders',label:'طلباتي',icon:'list'},{id:'me',label:'خروج',icon:'out'}],
@@ -765,6 +793,7 @@ const TABS={
 const HOME={customer:'home',tech:'tjobs',admin:'dash'};
 const PARENT={newReq:'home',track:'orders'};
 function render(){
+  renderInstall();
   const view=$('#view'),nav=$('#nav'),roles=$('#roles'),dp=$('#dayp');
   if(!CONFIGURED){view.innerHTML=vNotConfigured();return;}
   if(A.user===null){roles.hidden=true;nav.hidden=true;dp.hidden=true;view.innerHTML=vLogin();return;}
@@ -834,6 +863,9 @@ document.addEventListener('click',e=>{
   const order=()=>A.custOrders.find(x=>x.id===id)||A.techAwarded.find(x=>x.id===id);
   switch(a){
     case 'login':run(login);return;
+    case 'install':if(deferredPrompt){const p=deferredPrompt;p.prompt();p.userChoice.then(r=>{deferredPrompt=null;if(r.outcome!=='accepted')toast('تكدر تثبّته بعدين من قائمة المتصفح');renderInstall();});}return;
+    case 'installLater':installHidden=true;try{sessionStorage.setItem('fazaa-install-later','1');}catch(err){}renderInstall();return;
+    case 'copyLink':try{navigator.clipboard.writeText(location.origin+location.pathname).then(()=>toast('انسخ الرابط، الصقه بكروم أو سفاري'),()=>toast(location.href));}catch(err){toast(location.href);}return;
     case 'logout':run(async()=>{await auth.signOut();});return;
     case 'role':role=v;try{localStorage.setItem('fazaa-role',v);}catch(err){}V={name:HOME[v]};render();window.scrollTo(0,0);return;
     case 'go':go(v);return;
