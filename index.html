@@ -172,6 +172,8 @@ nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;z-index:30;max-width:calc(100% - 32px);text-align:center}
 .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+.memb{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;background:#141a20;color:#f2b705;border-radius:999px;padding:4px 14px;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.memb.dark{background:var(--ink);color:var(--accent)}
 .installbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));width:min(500px,calc(100% - 24px));z-index:20;background:var(--surface);border:2px solid var(--accent);border-radius:16px;padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 10px 30px rgba(0,0,0,.28)}
 @media (max-width:380px){.cats{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -335,7 +337,7 @@ function startSession(u){
     if(A.cfg&&A.isAdmin){const d=DEFAULT_CFG().comm,c=A.cfg.comm||{},miss={};Object.keys(d).forEach(k=>{if(!(k in c))miss[k]=d[k];});
       if(Object.keys(miss).length)db.doc('config/app').set({comm:miss},{merge:true}).catch(e=>console.warn(e));}
     render();});
-  sub(db.doc('users/'+uid),s=>{A.profile=s.exists?s.data():null;render();});
+  sub(db.doc('users/'+uid),s=>{A.profile=s.exists?s.data():null;ensureNo('customers','memberNo');ensureNo('techs','techNo');render();});
   sub(db.collection('ratings'),s=>{const r={};s.docs.forEach(d=>{const x=d.data();(r[x.techUid]||(r[x.techUid]={sum:0,n:0}));r[x.techUid].sum+=x.stars;r[x.techUid].n++;});A.ratings=r;render();});
   sub(db.collection('techs').where('status','==','approved'),s=>{A.approvedTechs=docs(s);render();});
   sub(db.collection('orders').where('customerUid','==',uid),s=>{
@@ -348,7 +350,7 @@ function startSession(u){
         firstLoad['o'+oid]=true;render();},e=>console.warn(e)));
     render();});
   sub(db.doc('techs/'+uid),s=>{
-    const had=!!A.tech;A.tech=s.exists?Object.assign({id:uid},s.data()):null;
+    const had=!!A.tech;A.tech=s.exists?Object.assign({id:uid},s.data()):null;ensureNo('techs','techNo');
     if(A.tech&&!had)startTech(uid);
     render();});
   if(A.isAdmin)startAdmin();
@@ -380,12 +382,26 @@ function watchOpen(){
   SUBS.push(()=>{if(openUnsub){openUnsub();openUnsub=null;openCat=null;}});
 }
 function startAdmin(){
+  [['customers',1249],['techs',39]].forEach(([k,v])=>{db.doc('counters/'+k).get().then(s=>{if(!s.exists)db.doc('counters/'+k).set({n:v});}).catch(e=>console.warn(e));});
   sub(db.collection('orders').orderBy('createdAt','desc').limit(500),s=>{A.adm.orders=docs(s);render();});
   sub(db.collection('topups').orderBy('createdAt','desc').limit(300),s=>{
     const before=A.adm.topups.filter(t=>t.status==='pending').length;A.adm.topups=docs(s);
     const now=A.adm.topups.filter(t=>t.status==='pending').length;if(firstLoad.adm&&now>before)notify('طلب شحن جديد','راجع الشحنات');firstLoad.adm=true;render();});
   sub(db.collection('techs'),s=>{A.adm.techs=docs(s);render();});
   sub(db.collection('ledger').orderBy('at','desc').limit(2000),s=>{A.adm.ledger=docs(s);render();});
+}
+
+/* ================= membership numbers ================= */
+const claiming={};
+async function ensureNo(counter,field){
+  if(!A.user||!A.profile||A.profile[field]||claiming[field])return;
+  if(field==='techNo'&&!A.tech)return;
+  claiming[field]=true;
+  try{await db.runTransaction(async tx=>{const cref=db.doc('counters/'+counter),uref=db.doc('users/'+A.user.uid);
+    const c=await tx.get(cref),u=await tx.get(uref);if(!c.exists||!u.exists||u.data()[field])return;
+    const n=c.data().n+1;tx.update(cref,{n});tx.update(uref,{[field]:n});});}
+  catch(e){console.warn('memberNo',e);}
+  finally{setTimeout(()=>{claiming[field]=false;},5000);}
 }
 
 /* ================= auth ================= */
@@ -440,7 +456,7 @@ function vNoCfg(){
 function vHome(){
   const counts={};A.approvedTechs.filter(canWork).forEach(t=>counts[t.cat]=(counts[t.cat]||0)+1);
   const active=A.custOrders.filter(o=>['open','awarded','accepted','onway','working'].includes(o.status));
-  return `<section class="hero"><h1>شنو العطل اليوم؟</h1>
+  return `<section class="hero">${(A.profile||{}).memberNo?`<span class="memb">${ic('user',14)} رقم عضويتك ${A.profile.memberNo}</span>`:''}<h1>شنو العطل اليوم؟</h1>
     <p>اختار الخدمة واكتب العطل. الفنيون يرسلون أسعارهم، وإنت تختار بكيفك.</p></section>
   ${isFree()?`<div class="freeban"><b>${ic('gift',16)} الشهر الأول بدون أي رسوم</b><p class="small">لحد ${dateAr(paidStart())}، فزعة ما تاخذ ولا دينار.</p></div>`:''}
   ${active.length?`<section class="sec"><h2>طلباتك الجارية</h2><div class="list">${active.map(orderRow).join('')}</div></section>`:''}
@@ -575,7 +591,7 @@ function vTJobs(){
   const done=A.techAwarded.filter(o=>o.status==='done');
   const open=A.openOrders.filter(o=>o.customerUid!==A.user.uid);
   const c=commFor(t,t.cat);const ok=canWork(t);
-  return `<div class="orow"><h1>الطلبات</h1>${isPrem(t)?`<span class="badge gold">${ic('crown',12)} مميز</span>`:''}</div>
+  return `${(A.profile||{}).techNo?`<span class="memb dark">${ic('tool',14)} رقم الفني ${A.profile.techNo}</span>`:''}<div class="orow"><h1>الطلبات</h1>${isPrem(t)?`<span class="badge gold">${ic('crown',12)} مميز</span>`:''}</div>
   ${freeBanner()}
   <div class="switch"><div><b>متاح لاستلام الطلبات</b><div class="small muted">${t.available!==false?'تشوف طلبات قسمك الجديدة':'مخفي عن الزبائن'}</div></div>
     <button class="toggle" role="switch" aria-checked="${t.available!==false}" aria-label="متاح" data-act="avail"></button></div>
