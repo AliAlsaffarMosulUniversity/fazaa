@@ -197,6 +197,11 @@ nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;
 .invite .ic2{width:46px;height:46px;border-radius:12px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
 .themeb{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;flex:none}
 .themeb:hover{border-color:var(--accent)}
+.topact{display:flex;align-items:center;gap:8px;flex:none}
+.toprow .brand{min-width:0}
+@media (max-width:440px){.topact{gap:5px}.themeb{width:36px;height:36px}.themeb svg{width:18px;height:18px}
+  .brand small{display:none}.brand b{font-size:26px}.mark{width:36px;height:36px}.dayp{font-size:11px;padding:3px 8px}}
+@media (max-width:340px){.dayp{display:none}}
 .search{display:flex;align-items:center;gap:8px;background:#fffdf5;border-radius:12px;padding:0 12px;min-height:50px;color:#141a20;margin-top:4px}
 .search input{border:0;background:transparent;flex:1;min-width:0;min-height:48px;color:#141a20;font-size:16px}
 .search input::placeholder{color:#6a6450}
@@ -217,7 +222,7 @@ nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;
         <div class="mark" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg></div>
         <div><b>فزعة</b><small>فنيّك يوصلك لباب البيت</small></div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px"><span class="dayp" id="dayp" hidden></span><button class="themeb" id="bellb" type="button" data-act="notif" aria-label="فعّل التنبيهات"></button><button class="themeb" id="qrb" type="button" data-act="shareApp" aria-label="شارك تطبيق فزعة" title="شارك فزعة"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/></svg></button><button class="themeb" id="themeb" type="button" aria-label="تبديل الوضع النهاري والليلي"></button></div>
+      <div class="topact"><span class="dayp" id="dayp" hidden></span><button class="themeb" id="bellb" type="button" data-act="notif" aria-label="فعّل التنبيهات"></button><button class="themeb" id="qrb" type="button" data-act="shareApp" aria-label="شارك تطبيق فزعة" title="شارك فزعة"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/></svg></button><button class="themeb" id="themeb" type="button" aria-label="تبديل الوضع النهاري والليلي"></button></div>
     </div>
     <div class="roles" role="group" aria-label="اختر الواجهة" id="roles" hidden></div>
   </header>
@@ -973,7 +978,7 @@ function render(){
   if(A.profile===null){roles.hidden=true;nav.hidden=true;view.innerHTML=vProfileSetup();return;}
   if(!A.cfg){view.innerHTML=vNoCfg();nav.hidden=true;return;}
   if(role==='admin'&&!A.isAdmin)role='customer';
-  dp.hidden=false;dp.textContent=isFree()?`مجاني · باقي ${daysLeft()} يوم`:'فزعة';dp.className='dayp'+(isFree()?' free':'');
+  dp.hidden=false;dp.textContent=isFree()?`مجاني · ${daysLeft()} يوم`:'فزعة';dp.className='dayp'+(isFree()?' free':'');
   const R=[['customer','زبون','user'],['tech','فني','tool']];if(A.isAdmin)R.push(['admin','الإدارة','chart']);
   roles.hidden=false;roles.innerHTML=R.map(([r,l,i])=>`<button data-act="role" data-v="${r}" aria-pressed="${role===r}">${ic(i,16)} ${l}</button>`).join('');
   const all=TABS[role].map(t=>t.id).concat(Object.keys(PARENT).filter(k=>TABS[role].some(t=>t.id===PARENT[k])));
