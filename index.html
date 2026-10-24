@@ -177,6 +177,12 @@ nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;z-index:30;max-width:calc(100% - 32px);text-align:center}
 .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,.0),0 1px 2px rgba(0,0,0,.06)}50%{box-shadow:0 0 0 4px rgba(229,57,53,.28),0 0 18px rgba(229,57,53,.35)}}
+.newjob{border-color:#e53935!important;animation:glow 1.6s ease-in-out infinite;cursor:pointer;text-align:start;width:100%;font:inherit;color:inherit}
+.rdot{display:inline-block;width:11px;height:11px;border-radius:50%;background:#e53935;flex:none;animation:blink 1s ease-in-out infinite}
+.newtag{display:inline-flex;align-items:center;gap:6px;color:#e53935;font-weight:700;font-size:13px}
+@media (prefers-reduced-motion:reduce){.newjob,.rdot{animation:none}}
 .icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:8px}
 .icb{height:48px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);display:grid;place-items:center}
 .icb[aria-pressed="true"]{border:2px solid var(--accent);background:var(--chip)}
@@ -269,6 +275,7 @@ const ICON={
   qr:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4"/>',
   bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
   belloff:'<path d="M6 8a6 6 0 0 1 9.3-5M18 8c0 7 3 9 3 9H9M6 8c0 7-3 9-3 9h4"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0M2 2l20 20"/>',
+  mega:'<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15 9a3 3 0 0 1 0 6M18 6a7 7 0 0 1 0 12"/>',
   tiles:'<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>',
   home:'<path d="M3 11 12 3l9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   list:'<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
@@ -371,6 +378,24 @@ function paintBell(){const b=$('#bellb');if(!b)return;const st=canNotify()?Notif
   b.title=st==='granted'?'التنبيهات مفعّلة':st==='denied'?'التنبيهات مقفلة':'فعّل التنبيهات';b.setAttribute('aria-label',b.title);}
 function notifNudge(text){if(!canNotify()||Notification.permission!=='default')return '';
   return `<div class="card hl" style="flex-direction:row;align-items:center;gap:12px"><span class="cat-ic">${ic('bell',22)}</span><p class="small" style="flex:1;min-width:0">${text}</p><button class="btn pri sm" data-act="notif">فعّل</button></div>`;}
+/* ================= announcement ================= */
+const DEFAULT_ANN='فزعة تطبيق جديد بالموصل، وكل ما يكبر يصير أنفع إلك. ساعدنا: شارك التطبيق ويا أهلك ومعارفك، وكل أصحاب المهن والفنيين اللي تعرفهم 🤝';
+const lsG=k=>{try{return localStorage.getItem(k);}catch(e){return null;}};
+const lsS=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}};
+function annLive(){const a=A.cfg&&A.cfg.announce;return a&&a.active&&a.text?a:null;}
+function annFor(r){const a=annLive();return a&&(a.aud==='all'||a.aud===r)?a:null;}
+function annBanner(r){const a=annFor(r);if(!a||lsG('fazaa-ann-'+a.id))return '';
+  return `<div class="card hl ann"><div class="orow" style="align-items:flex-start;gap:10px"><span class="cat-ic">${ic('mega',22)}</span><div style="flex:1;min-width:0"><b>إعلان من فزعة</b><p class="small" style="margin-top:4px;line-height:1.8">${esc(a.text).replace(/\n/g,'<br>')}</p></div><button class="btn ghost sm" data-act="annClose" data-id="${esc(a.id)}" aria-label="إخفاء الإعلان">✕</button></div>${a.share?`<button class="btn pri" data-act="shareApp">${ic('users',18)} شارك فزعة</button>`:''}</div>`;}
+function annCheck(){const a=annFor(role==='tech'?'techs':'customers');if(!a)return;if(lsG('fazaa-ann-seen')===a.id)return;lsS('fazaa-ann-seen',a.id);
+  if(Date.now()-(a.at||0)<3*864e5)setTimeout(()=>notify('📢 إعلان من فزعة',a.text.slice(0,80),true),800);}
+function annForm(){const a=(A.cfg&&A.cfg.announce)||{};const live=annLive();
+  return `<div class="card"><div class="orow"><b>${ic('mega',18)} إعلان للجميع</b><span class="badge ${live?'ok':''}">${live?'منشور الآن':'ماكو إعلان'}</span></div>
+  <form id="annForm" novalidate style="display:flex;flex-direction:column;gap:12px">
+    <label class="field"><span>نص الإعلان</span><textarea id="an_text" rows="4" maxlength="400">${esc(a.text||DEFAULT_ANN)}</textarea></label>
+    <label class="field"><span>يوصل لـ</span><select id="an_aud">${[['all','الكل'],['customers','الزبائن بس'],['techs','الفنيين بس']].map(([k,t])=>`<option value="${k}" ${(a.aud||'all')===k?'selected':''}>${t}</option>`).join('')}</select></label>
+    <label class="orow" style="justify-content:flex-start;gap:8px"><input type="checkbox" id="an_share" ${a.share===false?'':'checked'}> <span>أضيف زر «شارك فزعة» تحت الإعلان</span></label>
+    <div class="row2"><button class="btn pri" type="submit">انشر الإعلان</button>${live?'<button class="btn ghost" type="button" data-act="annStop">أوقف الإعلان</button>':''}</div>
+  </form><p class="small">يطلع للكل بأعلى الصفحة، ويوصلهم تنبيه مرة وحدة. الإعلان الجديد يرجع يطلع حتى للي سكّر القديم.</p></div>`;}
 async function run(fn){if(busy)return;busy=true;try{await fn();}catch(e){toast(errMsg(e));}finally{busy=false;}}
 
 /* ================= subscriptions ================= */
@@ -383,7 +408,7 @@ const docs=s=>s.docs.map(d=>Object.assign({id:d.id},d.data()));
 
 function startSession(u){
   const uid=u.uid;
-  sub(db.doc('config/app'),s=>{A.cfg=s.exists?s.data():null;applyCats();
+  sub(db.doc('config/app'),s=>{A.cfg=s.exists?s.data():null;applyCats();annCheck();
     if(A.cfg&&A.isAdmin&&!Array.isArray(A.cfg.cats))db.doc('config/app').set({cats:DEFAULT_CATS},{merge:true}).catch(e=>console.warn(e));
     if(A.cfg&&A.isAdmin){const d=DEFAULT_CFG().comm,c=A.cfg.comm||{},miss={};Object.keys(d).forEach(k=>{if(!(k in c))miss[k]=d[k];});
       if(Object.keys(miss).length)db.doc('config/app').set({comm:miss},{merge:true}).catch(e=>console.warn(e));}
@@ -517,6 +542,7 @@ function vHome(){
   const shown=catMatches(V.q||'');
   return `<section class="hero">${(A.profile||{}).memberNo?`<span class="memb">${ic('user',14)} رقم عضويتك ${A.profile.memberNo}</span>`:''}<h1>شنو العطل اليوم؟</h1>
     <label class="search" for="svcq">${ic('search',18)}<input id="svcq" type="search" enterkeyhint="search" autocomplete="off" placeholder="اكتب العطل: مولدة، تسريب ماي، سبلت…" value="${esc(V.q||'')}"></label></section>
+  ${annBanner('customers')}
   <section class="sec"><div class="sec-head"><h2>اختار الخدمة</h2>${isFree()?`<span class="badge ok">${ic('gift',12)} الشهر الأول مجاني</span>`:''}</div>
     <div class="cats">${activeCats().map(c=>`<button class="cat" data-act="newReq" data-id="${c.id}" ${shown.includes(c.id)?'':'hidden'}><span class="ic">${ic(catIcon(c),20)}</span>${c.name}<small>${counts[c.id]||0} فني</small></button>`).join('')}</div>
     <p class="empty" id="nocat" ${shown.length?'hidden':''}>ما لقينا خدمة بهالاسم. جرّب كلمة ثانية، مثل: كهرباء، ماي، مولدة.</p>
@@ -654,6 +680,7 @@ function vTJobs(){
   const c=commFor(t,t.cat);const ok=canWork(t);
   return `${(A.profile||{}).techNo?`<span class="memb dark">${ic('tool',14)} رقم الفني ${A.profile.techNo}</span>`:''}<div class="orow"><h1>الطلبات</h1>${isPrem(t)?`<span class="badge gold">${ic('crown',12)} مميز</span>`:''}</div>
   ${freeBanner()}
+  ${annBanner('techs')}
   ${notifNudge('فعّل التنبيهات حتى يوصلك إشعار أول ما ينزل طلب جديد بقسمك، أو يختارك زبون.')}
   <div class="switch"><div><b>متاح لاستلام الطلبات</b><div class="small muted">${t.available!==false?'تشوف طلبات قسمك الجديدة':'مخفي عن الزبائن'}</div></div>
     <button class="toggle" role="switch" aria-checked="${t.available!==false}" aria-label="متاح" data-act="avail"></button></div>
@@ -674,14 +701,21 @@ function vTJobs(){
         :`<p class="small muted">${ic('lock',13)} الزبون ما أرسل رقمه بعد. المنطقة: ${esc(o.area)}</p>`}
       <button class="btn dark sm" data-act="step" data-id="${o.id}">${o.status==='accepted'?'انطلقت للزبون':o.status==='onway'?'وصلت وبدأت الشغل':'خلّصت الشغل'}</button>
     </article>`;}).join('')}</div></section>`:''}
-  <section class="sec"><div class="sec-head"><h2>طلبات جديدة بقسمك</h2><span class="muted small">${t.available===false?0:open.length}</span></div>
+  <section class="sec"><div class="sec-head"><h2>طلبات جديدة بقسمك</h2><span class="muted small">${t.available===false?0:open.length}${t.available!==false&&open.filter(isNewJob).length?` · <span class="newtag"><span class="rdot"></span>${open.filter(isNewJob).length} جديد</span>`:''}</span></div>
   ${t.available===false?`<div class="empty">إنت مخفي حالياً. فعّل الزر فوق.</div>`:!ok?`<div class="empty">${ic('lock',24)}<span>سدّد رصيدك حتى تشوف وترسل عروض.</span></div>`:
     open.length?`<div class="list">${open.map(o=>offerCard(o,c)).join('')}</div>`:`<div class="empty">${ic('tool',26)}<span>ما في طلبات مفتوحة الآن. أول ما يجي طلب توصلك إشارة.</span></div>`}
   </section>
   ${done.length?`<section class="sec"><h2>منجزة (${done.length})</h2><div class="list">${done.slice(0,5).map(o=>`<div class="order"><div class="orow"><b>${catName(o.cat)} · ${iqd(o.price)}</b><span class="small muted">${o.rated?ic('star',12)+' '+o.rated:'بدون تقييم'}</span></div><div class="meta"><span>${timeAr(o.doneAt)}</span><span>${o.waived?'عمولة مجانية':'عمولة '+iqd(o.commission)}</span></div></div>`).join('')}</div></section>`:''}`;
 }
+const SEEN_K='fazaa-seen-o';let seenO=new Set();try{seenO=new Set(JSON.parse(localStorage.getItem(SEEN_K)||'[]'));}catch(e){}
+const isNewJob=o=>!A.myOffers[o.id]&&!seenO.has(o.id);
+function markSeen(id){seenO.add(id);try{localStorage.setItem(SEEN_K,JSON.stringify([...seenO].slice(-300)));}catch(e){}}
 function offerCard(o,c){
   const mine=A.myOffers[o.id];const editing=V.edit===o.id||!mine;
+  if(isNewJob(o))return `<button type="button" class="card newjob" data-act="openJob" data-id="${o.id}">
+    <div class="orow"><span class="newtag"><span class="rdot"></span>طلب جديد</span><span class="small muted">${ago(o.createdAt)}</span></div>
+    <b>${esc(catName(o.cat))} · ${esc(o.area)}</b>
+    <span class="small muted">اضغط حتى تشوف التفاصيل وترسل سعرك</span></button>`;
   return `<article class="card">
     <div class="orow"><b>${esc(o.area)} · ${esc(o.when)}</b><span class="small muted">${ago(o.createdAt)}</span></div>
     <p>${esc(o.problem)}</p>
@@ -774,6 +808,7 @@ function vDash(){
   const x=sums();const o=A.adm.orders;
   const pendingTop=A.adm.topups.filter(t=>t.status==='pending').length;const pendingTech=A.adm.techs.filter(t=>t.status==='pending').length;
   return `<h1>لوحة التحكم</h1>
+  ${annForm()}
   <div class="card"><div class="orow"><b>اليوم ${dayN()} من الإطلاق</b><span class="badge ${isFree()?'ok':'gold'}">${isFree()?'مجاني لحد '+dateAr(paidStart()):'العمولة فعّالة'}</span></div></div>
   ${pendingTop||pendingTech?`<div class="card hl"><b>تحتاج موافقتك</b><div class="row2">${pendingTop?`<button class="btn pri sm" data-act="go" data-v="atopups">${pendingTop} طلب شحن</button>`:''}${pendingTech?`<button class="btn pri sm" data-act="go" data-v="atechs">${pendingTech} فني جديد</button>`:''}</div></div>`:''}
   <div class="tiles">
@@ -952,7 +987,7 @@ function render(){
   else{view.innerHTML=html;render.pending=false;}
   render.lastView=V.name+(V.id||'');
   const cur=PARENT[V.name]||V.name;
-  const badge={tjobs:A.tech?A.techAwarded.filter(o=>o.status==='awarded').length:0,atopups:A.adm.topups.filter(t=>t.status==='pending').length,orders:A.custOrders.filter(o=>o.status==='open'&&(A.offersByOrder[o.id]||[]).length).length};
+  const badge={tjobs:A.tech?A.techAwarded.filter(o=>o.status==='awarded').length+(A.tech.available===false?0:A.openOrders.filter(o=>o.customerUid!==A.user.uid&&isNewJob(o)).length):0,atopups:A.adm.topups.filter(t=>t.status==='pending').length,orders:A.custOrders.filter(o=>o.status==='open'&&(A.offersByOrder[o.id]||[]).length).length};
   if(role==='tech'&&!(A.tech&&A.tech.status==='approved')){nav.hidden=true;}
   else{nav.hidden=false;$('#tabs').innerHTML=TABS[role].map(t=>`<button data-act="${t.id==='me'?'logout':'go'}" data-v="${t.id}" ${cur===t.id?'aria-current="page"':''}>${ic(t.icon,22)}${t.label}${badge[t.id]?`<span class="count">${badge[t.id]}</span>`:''}</button>`).join('');}
   if(role==='tech')watchOpen();
@@ -999,6 +1034,9 @@ document.addEventListener('click',e=>{
   switch(a){
     case 'login':run(login);return;
     case 'shareApp':openShare();return;
+    case 'openJob':markSeen(id);render.pending=false;render();setTimeout(()=>{const f=document.getElementById('op_'+id);if(f){f.scrollIntoView({block:'center',behavior:'smooth'});}},50);return;
+    case 'annClose':lsS('fazaa-ann-'+id,'1');render();return;
+    case 'annStop':run(async()=>{await db.doc('config/app').update({'announce.active':false});toast('انوقف الإعلان');});return;
     case 'closeShare':if(e.target===b||b.tagName==='BUTTON')closeShare();return;
     case 'copyApp':try{navigator.clipboard.writeText(APP_URL).then(()=>toast('انسخ رابط فزعة'),()=>toast(APP_URL));}catch(err){toast(APP_URL);}return;
     case 'nativeShare':try{navigator.share({title:'فزعة',text:shareMsg,url:APP_URL}).catch(()=>{});}catch(err){}return;
@@ -1078,6 +1116,9 @@ document.addEventListener('submit',e=>{
     await db.collection('topups').add({techUid:A.user.uid,techName:A.tech.name,amount:V.amt||25000,method:V.meth||'zain',ref,status:'pending',createdAt:Date.now()});
     toast('وصل طلبك، يضاف الرصيد بعد التأكد');render.pending=false;render();});
   if(f.id==='tEdit')return run(async()=>{await db.doc('techs/'+A.user.uid).update({name:val('te_name'),area:val('te_area'),bio:val('te_bio')});toast('انحفظ');});
+  if(f.id==='annForm')return run(async()=>{const text=val('an_text');if(text.length<5){toast('اكتب نص الإعلان');return;}
+    await db.doc('config/app').set({announce:{id:'a'+Date.now().toString(36),text,aud:val('an_aud')||'all',share:$('#an_share').checked,active:true,at:Date.now()}},{merge:true});
+    render.pending=false;toast('انتشر الإعلان للجميع 📢');render();});
   if(f.id==='catForm')return run(async()=>{const name=val('k_name');if(!name){toast('اكتب اسم الاختصاص');return;}
     const comm=Math.max(0,Math.round(+val('k_comm')||0));const kw=val('k_kw');const icon=V.icon||(V.ced?catIcon(CATS.find(c=>c.id===V.ced)):'tool');
     let list,id;
